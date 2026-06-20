@@ -1,0 +1,14 @@
+.venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.git
+.gitignore
+Dockerfile
+dist
+build
+output
+.idea
+/StruPPI_1.0.13.xsd
+/test-data/
+.env
