@@ -1,5 +1,6 @@
 import math
 from datetime import datetime, timedelta
+from io import BytesIO
 
 import pandas as pd
 from xsdata.formats.dataclass.serializers import XmlSerializer
@@ -12,14 +13,22 @@ from generated import SendungComplexType, TerminComplexType, TermintypSimpleType
     MitwirkenderComplexType, MitwirkendertypComplexType, MitwirkendeFunktionSimpleType, \
     GruppeComplexType
 
-
-def map_excel_to_xml(excel_path: str, start_date: datetime, end_date: datetime):
-    df = pd.read_excel(excel_path,
+def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
+    df = pd.read_excel(excel,
                        header=1,
-                       engine="openpyxl",
+                       sheet_name=str(start_date.year),
                        converters={
                            "Kategorie": str,
                        })
+
+    if start_date.year != end_date.year:
+        new_year_df = pd.read_excel(excel,
+                                    header=1,
+                                    sheet_name=str(end_date.year),
+                                    converters={
+                                        "Kategorie": str,
+                                    })
+        df = pd.concat([df, new_year_df])
 
     df = df.rename(columns={"Datum\n": "Datum"})
     df["Datum"] = pd.to_datetime(df["Datum"])
@@ -52,7 +61,7 @@ def map_excel_to_xml(excel_path: str, start_date: datetime, end_date: datetime):
         if end_date <= repeats_end:
             repeats_end = end_date
 
-        print(f"{repeats_start} - {repeats_end} ({repeats_duration})")
+        print(f"{repeats_start} - {repeats_end} [{repeats_duration}]")
 
         additionals_df = day_df[day_df["Kategorie"] != "10 - Sendung"]
         additionals_duration = additionals_df["Länge"].sum(skipna=True)
@@ -67,7 +76,7 @@ def map_excel_to_xml(excel_path: str, start_date: datetime, end_date: datetime):
             if pd.notna(sendung_s["Länge"]):
                 sendung_duration = sendung_s["Länge"] + additionals_duration
 
-            print(f"- {sendung_titel}: {sendung_duration}")
+            print(f"- {sendung_titel} [{sendung_duration}]")
             day_sendungen[sendung_titel] = sendung_duration
 
         repeation_duration = sum(day_sendungen.values(), timedelta(0))
