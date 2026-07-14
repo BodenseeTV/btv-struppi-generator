@@ -36,7 +36,7 @@ jobs:
         id: create-tag
         shell: bash
         run: |
-          echo "tag=$GITHUB_HEAD_REF.${GITHUB_SHA::8}.$(date '+%Y-%m-%d_%H:%M:%S')" | tee -a $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/heads/}.${GITHUB_SHA::8}.$(date '+%Y-%m-%d_%H:%M:%S')" | tee -a $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         id: push
