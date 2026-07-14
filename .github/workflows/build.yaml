@@ -36,7 +36,7 @@ jobs:
         id: create-tag
         shell: bash
         run: |
-          echo "tag=${{ github.base_ref }}.${GITHUB_SHA::8}.$(date '+%Y-%m-%d_%H:%M:%S')" | tee -a $GITHUB_OUTPUT
+          echo "tag=${{ github.head_ref }}.${GITHUB_SHA::8}.$(date '+%Y-%m-%d_%H:%M:%S')" | tee -a $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         id: push
@@ -44,7 +44,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }} ${{ steps.create-tag.outputs.tag }}
+          tags: ${{ steps.create-tag.outputs.tag }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Generate artifact attestation
