@@ -17,7 +17,7 @@ args = parser.parse_args()
 
 excel = read_excel(args.excel_path, args.excel_password)
 
-start_date = datetime.today()
+start_date = datetime.today() - timedelta(days=3)
 start_date = start_date.replace(hour=4, minute=30, second=0, microsecond=0)
 end_date = start_date + timedelta(days=15)
 
