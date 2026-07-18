@@ -1,6 +1,7 @@
 import math
 from datetime import datetime, timedelta
 from io import BytesIO
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 from xsdata.formats.dataclass.serializers import XmlSerializer
@@ -11,7 +12,9 @@ from generated import SendungComplexType, TerminComplexType, TermintypSimpleType
     KlassifizierungComplexType, FormatgruppeSimpleType, AblauftypSimpleType, AblaufComplexType, LinkComplexType, \
     SenderComplexType, Programmdaten, AliasComplexType, TitelartSimpleType, MitwirkungComplexType, \
     MitwirkenderComplexType, MitwirkendertypComplexType, MitwirkendeFunktionSimpleType, \
-    GruppeComplexType
+    GruppeComplexType, WiederholungComplexType
+
+TZ = ZoneInfo("Europe/Zurich")
 
 def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
     df = pd.read_excel(excel,
@@ -32,7 +35,7 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
 
     df = df.rename(columns={"Datum\n": "Datum"})
     df["Datum"] = pd.to_datetime(df["Datum"])
-    df["Datum"] = df["Datum"].dt.floor(freq="ms") + timedelta(hours=4, minutes=30)
+    df["Datum"] = df["Datum"].dt.tz_localize(TZ).dt.floor(freq="ms") + timedelta(hours=4, minutes=30)
     df["Datum"] = df["Datum"].ffill()
     df = df[df["Datum"] >= start_date]
     df = df[df["Datum"] <= end_date]
@@ -138,7 +141,7 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
         print()
 
     programm_daten = Programmdaten(
-        generierungsdatum=XmlDateTime.from_datetime(datetime.now()),
+        generierungsdatum=XmlDateTime.from_datetime(datetime.now(TZ)),
         sender=[
             SenderComplexType(
                 sendername="BodenseeTV",

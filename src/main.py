@@ -1,10 +1,13 @@
 import argparse
 
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from excel_reader import read_excel
 from ftp_writer import write_file_to_ftp
 from mapper import map_excel_to_xml
+
+TZ = ZoneInfo("Europe/Zurich")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--excel-path', dest='excel_path', type=str, required=True, help='Path to the Excel file')
@@ -17,7 +20,7 @@ args = parser.parse_args()
 
 excel = read_excel(args.excel_path, args.excel_password)
 
-start_date = datetime.today() - timedelta(days=3)
+start_date = datetime.today().replace(tzinfo=TZ) - timedelta(days=3)
 start_date = start_date.replace(hour=4, minute=30, second=0, microsecond=0)
 end_date = start_date + timedelta(days=15)
 
