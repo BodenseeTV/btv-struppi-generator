@@ -12,9 +12,11 @@ from generated import SendungComplexType, TerminComplexType, TermintypSimpleType
     KlassifizierungComplexType, FormatgruppeSimpleType, AblauftypSimpleType, AblaufComplexType, LinkComplexType, \
     SenderComplexType, Programmdaten, AliasComplexType, TitelartSimpleType, MitwirkungComplexType, \
     MitwirkenderComplexType, MitwirkendertypComplexType, MitwirkendeFunktionSimpleType, \
-    GruppeComplexType, WiederholungComplexType
+    GruppeComplexType, FolgenangabenComplexType, TextComplexType, \
+    TextartSimpleType
 
 TZ = ZoneInfo("Europe/Zurich")
+
 
 def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
     df = pd.read_excel(excel,
@@ -37,6 +39,15 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
     df["Datum"] = pd.to_datetime(df["Datum"])
     df["Datum"] = df["Datum"].dt.tz_localize(TZ).dt.floor(freq="ms") + timedelta(hours=4, minutes=30)
     df["Datum"] = df["Datum"].ffill()
+
+    maske = df["Kategorie"] == "10 - Sendung"
+    df["sendung_nr_im_jahr"] = pd.NA
+    df.loc[maske, "sendung_nr_im_jahr"] = (
+            df.loc[maske]
+            .groupby(df.loc[maske, "Datum"].dt.year)
+            .cumcount() + 1
+    )
+
     df = df[df["Datum"] >= start_date]
     df = df[df["Datum"] <= end_date]
 
@@ -72,28 +83,26 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
         day_sendungen: dict[str, timedelta] = {}
 
         sendungen_df = day_df[day_df["Kategorie"] == "10 - Sendung"]
+        sendungen_df["Dauer"] = sendungen_df["Länge"].fillna(timedelta(hours=1))
+        maske = sendungen_df["Länge"].notna()
+        sendungen_df.loc[maske, "Dauer"] += additionals_duration
+
         for _, sendung_s in sendungen_df.iterrows():
-            sendung_titel = sendung_s["Thema"]
+            print(
+                f"- {sendung_s['Datum'].year}-{sendung_s['sendung_nr_im_jahr']} {sendung_s['Thema']} [{sendung_s['Dauer']}]")
 
-            sendung_duration = timedelta(hours=1)
-            if pd.notna(sendung_s["Länge"]):
-                sendung_duration = sendung_s["Länge"] + additionals_duration
-
-            print(f"- {sendung_titel} [{sendung_duration}]")
-            day_sendungen[sendung_titel] = sendung_duration
-
-        repeation_duration = sum(day_sendungen.values(), timedelta(0))
+        repeation_duration = sendungen_df["Dauer"].sum()
         repeats_count = math.ceil(repeats_duration / repeation_duration)
 
         print(f"{repeats_count}x {repeation_duration}")
 
         sendung_start = repeats_start
         for i in range(0, repeats_count):
-            for sendung_titel, sendung_duration in day_sendungen.items():
+            for _, sendung_s in sendungen_df.iterrows():
                 if sendung_start >= repeats_end:
                     continue
 
-                sendung_end = sendung_start + sendung_duration
+                sendung_end = sendung_start + sendung_s["Dauer"]
                 if sendung_end > repeats_end:
                     sendung_end = repeats_end
 
@@ -108,17 +117,28 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
                         ende=XmlDateTime.from_datetime(sendung_end)
                     ),
                     titel=TitelComplexType(
-                        termintitel=sendung_titel,
+                        termintitel=sendung_s["Thema"],
                         alias=[
                             AliasComplexType(
                                 titelart=TitelartSimpleType.TITEL,
-                                aliastitel=sendung_titel,
+                                aliastitel=sendung_s["Thema"],
                             )
                         ]
                     ),
+                    text=[
+                        TextComplexType(
+                            textart=TextartSimpleType.BESCHREIBUNG,
+                            value=sendung_s["Thema"]
+                        )
+                    ],
                     infos=InfosComplexType(
                         klassifizierung=KlassifizierungComplexType(
                             formatgruppe=FormatgruppeSimpleType.SONSTIGES
+                        ),
+                        folge=FolgenangabenComplexType(
+                            serien_id="LFS",
+                            staffel=sendung_s["Datum"].year,
+                            folgennummer=sendung_s["sendung_nr_im_jahr"]
                         )
                     ),
                     mitwirkende=MitwirkungComplexType(
@@ -141,7 +161,7 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
         print()
 
     programm_daten = Programmdaten(
-        generierungsdatum=XmlDateTime.from_datetime(datetime.now(TZ)),
+        generierungsdatum=XmlDateTime.from_datetime(pd.to_datetime(datetime.now(TZ)).floor(freq="ms")),
         sender=[
             SenderComplexType(
                 sendername="BodenseeTV",
