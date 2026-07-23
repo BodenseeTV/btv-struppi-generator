@@ -13,7 +13,7 @@ from generated import SendungComplexType, TerminComplexType, TermintypSimpleType
     SenderComplexType, Programmdaten, AliasComplexType, TitelartSimpleType, MitwirkungComplexType, \
     MitwirkenderComplexType, MitwirkendertypComplexType, MitwirkendeFunktionSimpleType, \
     GruppeComplexType, FolgenangabenComplexType, TextComplexType, \
-    TextartSimpleType
+    TextartSimpleType, EpisodeComplexType, ExterneIdComplexType
 
 TZ = ZoneInfo("Europe/Zurich")
 
@@ -80,18 +80,16 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
         additionals_df = day_df[day_df["Kategorie"] != "10 - Sendung"]
         additionals_duration = additionals_df["Länge"].sum(skipna=True)
 
-        day_sendungen: dict[str, timedelta] = {}
-
         sendungen_df = day_df[day_df["Kategorie"] == "10 - Sendung"]
-        sendungen_df["Dauer"] = sendungen_df["Länge"].fillna(timedelta(hours=1))
+        sendungen_df["dauer"] = sendungen_df["Länge"].fillna(timedelta(hours=1))
         maske = sendungen_df["Länge"].notna()
-        sendungen_df.loc[maske, "Dauer"] += additionals_duration
+        sendungen_df.loc[maske, "dauer"] += additionals_duration
 
         for _, sendung_s in sendungen_df.iterrows():
             print(
-                f"- {sendung_s['Datum'].year}-{sendung_s['sendung_nr_im_jahr']} {sendung_s['Thema']} [{sendung_s['Dauer']}]")
+                f"- {sendung_s['Datum'].year}-{sendung_s['sendung_nr_im_jahr']} {sendung_s['Thema']} [{sendung_s['dauer']}]")
 
-        repeation_duration = sendungen_df["Dauer"].sum()
+        repeation_duration = sendungen_df["dauer"].sum()
         repeats_count = math.ceil(repeats_duration / repeation_duration)
 
         print(f"{repeats_count}x {repeation_duration}")
@@ -102,13 +100,19 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
                 if sendung_start >= repeats_end:
                     continue
 
-                sendung_end = sendung_start + sendung_s["Dauer"]
+                sendung_end = sendung_start + sendung_s["dauer"]
                 if sendung_end > repeats_end:
                     sendung_end = repeats_end
 
                 sendung_id = len(struppi_sendungen) + 1
                 struppi_sendungen.append(SendungComplexType(
                     sendung_id=str(sendung_id),
+                    externe_id=[
+                        ExterneIdComplexType(
+                            externe_id=str(int(sendung_s["ANr"])),
+                            quelle="LFS-Archivnummer"
+                        )
+                    ],
                     termin=TerminComplexType(
                         termin_id=str(sendung_id),
                         reihenfolge=sendung_id,
@@ -128,7 +132,7 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
                     text=[
                         TextComplexType(
                             textart=TextartSimpleType.BESCHREIBUNG,
-                            value=sendung_s["Thema"]
+                            value=sendung_s["Synopsis\nmax. 150 Zeichen inkl. Leerzeichen"]
                         )
                     ],
                     infos=InfosComplexType(
