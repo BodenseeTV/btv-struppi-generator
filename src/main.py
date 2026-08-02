@@ -16,7 +16,7 @@ parser.add_argument('--ftp-enabled', dest='ftp_enabled', type=bool, default=Fals
 parser.add_argument('--ftp-url', dest='ftp_url', type=str, help='The url to upload the file to')
 parser.add_argument('--ftp-user', dest='ftp_user', type=str, help='The user with which to upload')
 parser.add_argument('--ftp-password', dest='ftp_password', type=str, help='The password with which to upload')
-parser.add_argument('--output-path', 'output_path', type=str, default='btv.xml', help='The path to the output file')
+parser.add_argument('--output-path', dest='output_path', type=str, default='btv.xml', help='The path to the output file')
 args = parser.parse_args()
 
 excel = read_excel(args.excel_path, args.excel_password)
