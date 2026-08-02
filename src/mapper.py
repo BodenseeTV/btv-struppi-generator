@@ -127,6 +127,12 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
                                 titelart=TitelartSimpleType.TITEL,
                                 aliastitel=sendung_s["Thema"],
                             )
+                        ],
+                        episoden=[
+                            EpisodeComplexType(
+                                episodentitel=sendung_s["Thema"],
+                                episodenreihenfolge=sendung_s["sendung_nr_im_jahr"]
+                            )
                         ]
                     ),
                     text=[
@@ -140,7 +146,7 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
                             formatgruppe=FormatgruppeSimpleType.SONSTIGES
                         ),
                         folge=FolgenangabenComplexType(
-                            serien_id="LFS",
+                            #serien_id="LFS",
                             staffel=sendung_s["Datum"].year,
                             folgennummer=sendung_s["sendung_nr_im_jahr"]
                         )
