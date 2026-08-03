@@ -175,6 +175,7 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
         sender=[
             SenderComplexType(
                 sendername="BodenseeTV",
+                senderkuerzel="BTV",
                 vps=False,
                 kontaktdaten="redaktion.steckborn@bodenseetv.ch",
                 senderlogo=[
