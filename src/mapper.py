@@ -37,7 +37,7 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
 
     df = df.rename(columns={"Datum\n": "Datum"})
     df["Datum"] = pd.to_datetime(df["Datum"])
-    df["Datum"] = df["Datum"].dt.tz_localize(TZ).dt.floor(freq="ms") + timedelta(hours=4, minutes=30)
+    df["Datum"] = df["Datum"].dt.tz_localize(TZ).dt.floor(freq="ms") + timedelta(hours=5, minutes=30)
     df["Datum"] = df["Datum"].ffill()
 
     maske = df["Kategorie"] == "10 - Sendung"
