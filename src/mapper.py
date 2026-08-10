@@ -1,6 +1,7 @@
 import math
 from datetime import datetime, timedelta
 from io import BytesIO
+from math import isnan
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -15,8 +16,8 @@ from generated import SendungComplexType, TerminComplexType, TermintypSimpleType
     GruppeComplexType, FolgenangabenComplexType, TextComplexType, \
     TextartSimpleType, EpisodeComplexType, ExterneIdComplexType
 
-TZ = ZoneInfo("Europe/Zurich")
 
+TZ = ZoneInfo("Europe/Zurich")
 
 def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
     df = pd.read_excel(excel,
@@ -51,7 +52,13 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
     df = df[df["Datum"] >= start_date]
     df = df[df["Datum"] <= end_date]
 
-    df["Länge"] = pd.to_timedelta(df["Länge"].str.replace(r"(\d+):(\d+):(\d+):(\d+)", r"\1:\2:\3.\4", regex=True))
+    m = df["Länge"].str.extract(r"(\d+):(\d+):(\d+):(\d+)").astype(float)
+    df["Länge"] = (
+            pd.to_timedelta(m[0], unit="h")
+            + pd.to_timedelta(m[1], unit="m")
+            + pd.to_timedelta(m[2], unit="s")
+            + pd.to_timedelta(m[3] * 40, unit="ms")
+    )
 
     df = df[df["Kategorie"].notna() & (df["Kategorie"].str.strip() != "")]
     df = df[df["Kategorie"].str.startswith("10")]
@@ -105,14 +112,8 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
                     sendung_end = repeats_end
 
                 sendung_id = len(struppi_sendungen) + 1
-                struppi_sendungen.append(SendungComplexType(
+                sendung = SendungComplexType(
                     sendung_id=str(sendung_id),
-                    externe_id=[
-                        ExterneIdComplexType(
-                            externe_id=str(int(sendung_s["ANr"])),
-                            quelle="LFS-Archivnummer"
-                        )
-                    ],
                     termin=TerminComplexType(
                         termin_id=str(sendung_id),
                         reihenfolge=sendung_id,
@@ -146,7 +147,7 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
                             formatgruppe=FormatgruppeSimpleType.SONSTIGES
                         ),
                         folge=FolgenangabenComplexType(
-                            #serien_id="LFS",
+                            # serien_id="LFS",
                             staffel=sendung_s["Datum"].year,
                             folgennummer=sendung_s["sendung_nr_im_jahr"]
                         )
@@ -165,7 +166,17 @@ def map_excel_to_xml(excel: BytesIO, start_date: datetime, end_date: datetime):
                             )
                         ]
                     )
-                ))
+                )
+
+                if not isnan(sendung_s["ANr"]):
+                    sendung.externe_id = [
+                        ExterneIdComplexType(
+                            externe_id=str(int(sendung_s["ANr"])),
+                            quelle="LFS-Archivnummer"
+                        )
+                    ]
+
+                struppi_sendungen.append(sendung)
 
                 sendung_start = sendung_end
         print()
