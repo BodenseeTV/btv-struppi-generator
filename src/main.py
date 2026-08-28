@@ -22,7 +22,7 @@ args = parser.parse_args()
 excel = read_excel(args.excel_path, args.excel_password)
 
 start_date = datetime.today().replace(tzinfo=TZ) - timedelta(days=3)
-start_date = start_date.replace(hour=5, minute=30, second=0, microsecond=0)
+start_date = start_date.replace(hour=5, minute=0, second=0, microsecond=0)
 end_date = start_date + timedelta(days=15)
 
 xml_string = map_excel_to_xml(excel, start_date, end_date)
